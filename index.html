@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Request Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Print Styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .print-page-break {
+                page-break-before: always;
+            }
+
+            /* Reset Kanban layout for print to list */
+            .kanban-board {
+                display: block;
+            }
+
+            .kanban-card {
+                border: 1px solid #ccc;
+                margin-bottom: 20px;
+                break-inside: avoid;
+            }
+        }
+
+        @media screen {
+            .print-only {
+                display: none !important;
+            }
+        }
+
+        /* Custom Scrollbar for Kanban columns */
+        .scroller::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scroller::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .scroller::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+    <div id="app" class="min-h-screen flex flex-col">
+
+        <!-- Header -->
+        <header class="bg-white shadow-sm sticky top-0 z-50 no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                <h1 class="text-xl font-bold text-indigo-600 flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    SampleRequest
+                </h1>
+
+                <div class="flex items-center gap-4">
+                    <div class="text-xs text-gray-500 hidden sm:block">
+                        API Status:
+                        <span :class="gasApiUrl ? 'text-green-600 font-semibold' : 'text-orange-500 font-semibold'">
+                            {{ gasApiUrl ? 'Connected' : 'Demo Mode' }}
+                        </span>
+                    </div>
+                    <button @click="switchMode"
+                        class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-100 transition">
+                        {{ viewMode === 'requester' ? '出荷担当へ切替' : '注文入力へ切替' }}
+                    </button>
+                </div>
+            </div>
+            <!-- Sub-header for Status Messages -->
+            <div v-if="message"
+                :class="`text-center py-2 text-sm text-white ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'}`">
+                {{ message }}
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- Requester View -->
+            <div v-if="viewMode === 'requester'" class="space-y-8 no-print">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left: Product Selection -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h2 class="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">商品選択</h2>
+
+                            <!-- Search -->
+                            <div class="mb-4">
+                                <input type="text" v-model="searchQuery" placeholder="商品名またはJANコードで検索..."
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                            </div>
+
+                            <!-- Product List -->
+                            <div
+                                class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto scroller pr-2">
+                                <div v-for="product in filteredProducts" :key="product.jan"
+                                    class="border rounded-lg p-4 hover:shadow-md transition bg-gray-50 flex flex-col justify-between">
+                                    <div>
+                                        <div class="text-xs text-gray-500 font-mono mb-1">{{ product.jan }}</div>
+                                        <div class="font-medium text-gray-900 mb-2">{{ product.name }}</div>
+                                    </div>
+                                    <div class="flex items-center justify-between mt-3">
+                                        <div class="flex items-center border rounded bg-white">
+                                            <button @click="adjustTempQty(product, -1)"
+                                                class="px-3 py-1 text-gray-600 hover:bg-gray-100">-</button>
+                                            <input type="number" v-model.number="product.tempQty" min="1"
+                                                class="w-12 text-center text-sm border-none focus:ring-0">
+                                            <button @click="adjustTempQty(product, 1)"
+                                                class="px-3 py-1 text-gray-600 hover:bg-gray-100">+</button>
+                                        </div>
+                                        <button @click="addToCart(product)"
+                                            class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700 transition">
+                                            追加
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Cart & Details -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <!-- Cart -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h2 class="text-lg font-semibold mb-4 text-gray-900 flex justify-between items-center">
+                                依頼リスト
+                                <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">{{
+                                    cartTotalItems }} 点</span>
+                            </h2>
+
+                            <div v-if="cart.length === 0" class="text-center py-8 text-gray-400 text-sm">
+                                商品が選択されていません
+                            </div>
+                            <ul v-else class="space-y-3 mb-6 max-h-[300px] overflow-y-auto scroller">
+                                <li v-for="(item, index) in cart" :key="index"
+                                    class="flex justify-between items-start text-sm border-b pb-2 last:border-0">
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-700">{{ item.name }}</div>
+                                        <div class="text-xs text-gray-500">{{ item.jan }}</div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-semibold text-indigo-600">x{{ item.qty }}</span>
+                                        <button @click="removeFromCart(index)" class="text-red-400 hover:text-red-600">
+                                            &times;
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Request Form -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h2 class="text-lg font-semibold mb-4 text-gray-900 border-b pb-2">送付先情報</h2>
+                            <form @submit.prevent="submitOrder" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">発注担当者名 <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" v-model="form.requester" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">納品指定日 <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="date" v-model="form.targetDate" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">宛先・住所 <span
+                                            class="text-red-500">*</span></label>
+                                    <textarea v-model="form.address" required rows="3" placeholder="〒000-0000 東京都..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"></textarea>
+                                </div>
+
+                                <button type="submit" :disabled="isSubmitting || cart.length === 0"
+                                    class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition transform active:scale-95">
+                                    <span v-if="isSubmitting">送信中...</span>
+                                    <span v-else>依頼を送信する</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipper (Factory) View -->
+            <div v-else class="h-full flex flex-col no-print">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">タスクボード</h2>
+                    <div class="flex gap-2">
+                        <button @click="fetchOrders" class="p-2 text-gray-500 hover:text-indigo-600 transision"
+                            title="更新">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                        <button v-if="!gasApiUrl" @click="generateDemoData"
+                            class="px-3 py-1 bg-gray-200 text-xs rounded hover:bg-gray-300">
+                            + デモデータ追加
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kanban Board -->
+                <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
+
+                    <!-- Column: Pending -->
+                    <div class="flex flex-col bg-gray-100 rounded-xl p-4 h-[calc(100vh-180px)]">
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center justify-between">
+                            未処理
+                            <span class="bg-gray-200 px-2 py-0.5 rounded-full text-xs">{{ pendingOrders.length }}</span>
+                        </h3>
+                        <div class="space-y-3 overflow-y-auto scroller flex-grow pr-1">
+                            <div v-for="order in pendingOrders" :key="order.id"
+                                :class="['bg-white p-4 rounded-lg shadow-sm border-l-4 cursor-pointer hover:shadow-md transition', getUrgencyClass(order.targetDate)]">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-mono text-gray-400">#{{ order.id.slice(0,6) }}</span>
+                                    <span class="text-xs font-bold text-gray-600">{{ formatDate(order.targetDate) }}
+                                        納品</span>
+                                </div>
+                                <h4 class="font-bold text-gray-800 mb-1">{{ order.requester }}</h4>
+                                <p class="text-xs text-gray-500 mb-3 truncate">{{ order.address }}</p>
+                                <div class="text-xs bg-gray-50 p-2 rounded mb-3">
+                                    <span class="font-semibold block mb-1">内容({{ order.items.length }}点):</span>
+                                    <div v-for="(item, i) in order.items.slice(0,2)" :key="i" class="truncate">- {{
+                                        item.name }} x{{ item.qty }}</div>
+                                    <div v-if="order.items.length > 2" class="text-gray-400 pl-2">...他 {{
+                                        order.items.length - 2 }} 点</div>
+                                </div>
+                                <button @click="updateStatus(order, '確認済み')"
+                                    class="w-full py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition">
+                                    ピッキング開始 ->
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column: Confirmed/Picking -->
+                    <div class="flex flex-col bg-blue-50 rounded-xl p-4 h-[calc(100vh-180px)]">
+                        <h3 class="font-bold text-blue-800 mb-4 flex items-center justify-between">
+                            確認済み (ピッキング中)
+                            <span class="bg-blue-100 px-2 py-0.5 rounded-full text-xs">{{ confirmedOrders.length
+                                }}</span>
+                        </h3>
+                        <div class="space-y-3 overflow-y-auto scroller flex-grow pr-1">
+                            <div v-for="order in confirmedOrders" :key="order.id"
+                                class="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-mono text-gray-400">#{{ order.id.slice(0,6) }}</span>
+                                    <button @click="printOrder(order)" class="text-gray-400 hover:text-gray-600"
+                                        title="印刷">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <h4 class="font-bold text-gray-800 mb-1">{{ order.requester }}</h4>
+                                <div class="text-sm text-gray-600 mb-4">
+                                    <span class="font-bold">{{ order.items.reduce((sum, i) => sum + i.qty, 0) }}</span>
+                                    個の商品
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="updateStatus(order, '未処理')"
+                                        class="flex-1 py-1.5 bg-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-300">
+                                        &lt;- 戻す
+                                    </button>
+                                    <button @click="updateStatus(order, '完了')"
+                                        class="flex-1 py-1.5 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">
+                                        発送完了 ->
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column: Completed -->
+                    <div class="flex flex-col bg-gray-50 rounded-xl p-4 h-[calc(100vh-180px)]">
+                        <h3 class="font-bold text-gray-500 mb-4 flex items-center justify-between">
+                            完了
+                            <span class="bg-gray-200 px-2 py-0.5 rounded-full text-xs">{{ completedOrders.length
+                                }}</span>
+                        </h3>
+                        <div class="space-y-3 overflow-y-auto scroller flex-grow pr-1 opacity-75">
+                            <div v-for="order in completedOrders" :key="order.id"
+                                class="bg-white p-3 rounded-lg border border-gray-100">
+                                <div class="flex justify-between">
+                                    <span class="text-xs font-mono text-gray-400">#{{ order.id.slice(0,6) }}</span>
+                                    <span
+                                        class="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Sent</span>
+                                </div>
+                                <div class="text-sm font-medium text-gray-600 mt-1">{{ order.requester }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print Layout (Invisible on Screen) -->
+            <div id="print-area" class="print-only p-8">
+                <div v-if="printingOrder" class="print-page-break">
+                    <div class="text-center mb-8 border-b-2 border-black pb-4">
+                        <h1 class="text-3xl font-bold mb-2">サンプル出荷依頼書</h1>
+                        <p class="text-sm">注文ID: {{ printingOrder.id }}</p>
+                        <p class="text-sm">発行日: {{ new Date().toLocaleDateString('ja-JP') }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div class="border p-4">
+                            <h3 class="font-bold border-b mb-2">発注元</h3>
+                            <p class="text-lg">{{ printingOrder.requester }}</p>
+                        </div>
+                        <div class="border p-4 bg-gray-50">
+                            <h3 class="font-bold border-b mb-2">納品指定日</h3>
+                            <p class="text-xl font-bold">{{ formatDate(printingOrder.targetDate) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-8 p-4 border rounded">
+                        <h3 class="font-bold border-b mb-2">送付先</h3>
+                        <p class="whitespace-pre-wrap text-lg">{{ printingOrder.address }}</p>
+                    </div>
+
+                    <table class="w-full border-collapse border border-black mb-8">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-black p-2 w-16">✔</th>
+                                <th class="border border-black p-2 text-left">JANコード</th>
+                                <th class="border border-black p-2 text-left">商品名</th>
+                                <th class="border border-black p-2 w-24">数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, i) in printingOrder.items" :key="i">
+                                <td class="border border-black p-2 text-center">
+                                    <div class="w-4 h-4 border border-black mx-auto"></div>
+                                </td>
+                                <td class="border border-black p-2 font-mono">{{ item.jan }}</td>
+                                <td class="border border-black p-2">{{ item.name }}</td>
+                                <td class="border border-black p-2 text-center font-bold text-lg">{{ item.qty }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="border-t-2 border-black pt-4 mt-12 flex justify-between text-sm">
+                        <div>確認者: ________________</div>
+                        <div>出荷日: ____年__月__日</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        // --- CONFIGURATION ---
+        // Replace this with your deployed GAS Web App URL
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysGWGp3gKKdiT46ONGkhPzJ595ZqSg2sUVmpNbD-76alLhbikUHGZ0ttEaKKTmOJBC/exec';
+        // Example: 'https://script.google.com/macros/s/xxxxx/exec'
+
+        // --- MOCK DATA FOR DEMO ---
+        const SAMPLE_PRODUCTS = [
+            { jan: '4901234567890', name: 'プレミアム緑茶 500ml', tempQty: 1 },
+            { jan: '4901234567891', name: '香ばし玄米茶 500ml', tempQty: 1 },
+            { jan: '4901234567892', name: '特選ジャスミン茶 500ml', tempQty: 1 },
+            { jan: '4901234567893', name: '濃厚ブラックコーヒー 280ml', tempQty: 1 },
+            { jan: '4901234567894', name: '微糖カフェオレ 280ml', tempQty: 1 },
+            { jan: '4501234567800', name: 'リフレッシュ・レモン 500ml', tempQty: 1 },
+        ];
+
+        // Global Error Handler
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            const errorDiv = document.getElementById('error-display') || document.createElement('div');
+            errorDiv.id = 'error-display';
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.bottom = '0';
+            errorDiv.style.left = '0';
+            errorDiv.style.right = '0';
+            errorDiv.style.backgroundColor = 'red';
+            errorDiv.style.color = 'white';
+            errorDiv.style.padding = '10px';
+            errorDiv.style.zIndex = '9999';
+            errorDiv.innerHTML = `<strong>Error:</strong> ${msg} (Line: ${lineNo})`;
+            document.body.appendChild(errorDiv);
+            return false;
+        };
+
+        createApp({
+            data() {
+                return {
+                    viewMode: 'requester', // 'requester' | 'shipper'
+                    gasApiUrl: GAS_API_URL,
+
+                    // Common Data
+                    products: SAMPLE_PRODUCTS,
+                    orders: [],
+
+                    // Requester State
+                    searchQuery: '',
+                    cart: [],
+                    form: {
+                        requester: '',
+                        address: '',
+                        targetDate: new Date().toISOString().split('T')[0] // today
+                    },
+                    isSubmitting: false,
+
+                    // Shipper State
+                    printingOrder: null,
+
+                    // UI State
+                    message: '',
+                    messageType: 'success'
+                }
+            },
+            computed: {
+                filteredProducts() {
+                    if (!this.searchQuery) return this.products;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.products.filter(p =>
+                        p.name.toLowerCase().includes(q) ||
+                        p.jan.includes(q)
+                    );
+                },
+                cartTotalItems() {
+                    return this.cart.reduce((sum, item) => sum + item.qty, 0);
+                },
+                // Kanban Lists
+                pendingOrders() { return this.orders.filter(o => o.status === '未処理' || !o.status); },
+                confirmedOrders() { return this.orders.filter(o => o.status === '確認済み'); },
+                completedOrders() { return this.orders.filter(o => o.status === '完了'); }
+            },
+            async mounted() {
+                // Fetch Products first, then Orders
+                await this.fetchProducts();
+                await this.fetchOrders();
+            },
+            methods: {
+                // --- Data Fetching ---
+                async fetchProducts() {
+                    if (this.gasApiUrl) {
+                        try {
+                            // fetch products
+                            const res = await fetch(`${this.gasApiUrl}?action=products`);
+                            const data = await res.json();
+                            console.log('API Response:', data); // Debug log
+
+                            if (data.status === 'error') {
+                                console.error('API Error:', data.message);
+                                this.showMessage('APIエラー: ' + data.message, 'error');
+                            } else if (data.products && data.products.length > 0) {
+                                this.products = data.products.map(p => ({
+                                    ...p,
+                                    tempQty: 1
+                                }));
+                                this.showMessage('商品マスタを読み込みました');
+                            } else if (data.orders) {
+                                console.warn('Old API version detected');
+                                this.showMessage('エラー: GASのデプロイが更新されていません。「デプロイを管理」から「新バージョン」を作成してください。', 'error');
+                            } else {
+                                console.warn('Product list empty, using demo data');
+                                this.showMessage('商品マスタが空です（またはシート名 "Products" が不正）', 'error');
+                            }
+                        } catch (e) {
+                            console.error('Failed to fetch products:', e);
+                            this.showMessage('商品マスタ取得エラー: ' + e.message, 'error');
+                        }
+                    }
+                },
+                // --- Navigation ---
+                switchMode() {
+                    this.viewMode = this.viewMode === 'requester' ? 'shipper' : 'requester';
+                    if (this.viewMode === 'shipper') this.fetchOrders();
+                },
+                showMessage(text, type = 'success') {
+                    this.message = text;
+                    this.messageType = type;
+                    setTimeout(() => this.message = '', 3000);
+                },
+
+                // --- Requester Logic ---
+                adjustTempQty(product, delta) {
+                    const newQty = (product.tempQty || 1) + delta;
+                    if (newQty >= 1) product.tempQty = newQty;
+                },
+                addToCart(product) {
+                    const existing = this.cart.find(item => item.jan === product.jan);
+                    if (existing) {
+                        existing.qty += product.tempQty;
+                    } else {
+                        this.cart.push({
+                            jan: product.jan,
+                            name: product.name,
+                            qty: product.tempQty
+                        });
+                    }
+                    product.tempQty = 1;
+                    this.showMessage(`カートに追加: ${product.name}`);
+                },
+                removeFromCart(index) {
+                    this.cart.splice(index, 1);
+                },
+                async submitOrder() {
+                    this.isSubmitting = true;
+
+                    const payload = {
+                        action: 'create',
+                        requester: this.form.requester,
+                        address: this.form.address,
+                        targetDate: this.form.targetDate,
+                        items: this.cart
+                    };
+
+                    if (this.gasApiUrl) {
+                        try {
+                            // Using JSONP or CORS-enabled POST (here we assume CORS setup in GAS)
+                            const res = await fetch(this.gasApiUrl, {
+                                method: 'POST',
+                                redirect: 'follow',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify(payload)
+                            });
+                            const result = await res.json();
+                            if (result.status === 'error') throw new Error(result.message);
+
+                            this.showMessage('注文を送信しました！');
+                            this.resetForm();
+
+                        } catch (e) {
+                            console.error(e);
+                            this.showMessage('送信エラー: ' + e.message, 'error');
+                        }
+                    } else {
+                        // Demo Mode
+                        await new Promise(r => setTimeout(r, 800)); // Fake delay
+                        const demoOrder = {
+                            id: crypto.randomUUID(),
+                            timestamp: new Date(),
+                            status: '未処理',
+                            ...payload
+                        };
+                        this.orders.push(demoOrder);
+                        this.saveLocalOrders();
+                        this.showMessage('デモ注文を作成しました');
+                        this.resetForm();
+                    }
+
+                    this.isSubmitting = false;
+                },
+                resetForm() {
+                    this.cart = [];
+                    this.form.address = '';
+                    this.form.requester = '';
+                    this.form.targetDate = new Date().toISOString().split('T')[0];
+                },
+
+                // --- Shipper Logic ---
+                async fetchOrders() {
+                    if (this.gasApiUrl) {
+                        try {
+                            const res = await fetch(this.gasApiUrl);
+                            const data = await res.json();
+                            this.orders = data.orders || [];
+                        } catch (e) {
+                            console.error('Fetch error:', e);
+                        }
+                    } else {
+                        // Load from local storage for persistence in demo
+                        const saved = localStorage.getItem('demo_orders');
+                        if (saved) this.orders = JSON.parse(saved);
+                    }
+                },
+                async updateStatus(order, newStatus) {
+                    const originalStatus = order.status;
+                    order.status = newStatus; // Optimistic update
+
+                    if (this.gasApiUrl) {
+                        try {
+                            const res = await fetch(this.gasApiUrl, {
+                                method: 'POST',
+                                redirect: 'follow',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({
+                                    action: 'updateStatus',
+                                    id: order.id,
+                                    status: newStatus
+                                })
+                            });
+                            const result = await res.json();
+                            if (result.status === 'error') throw new Error(result.message);
+                        } catch (e) {
+                            order.status = originalStatus; // Revert
+                            this.showMessage('ステータス更新失敗', 'error');
+                            return;
+                        }
+                    } else {
+                        this.saveLocalOrders();
+                    }
+                },
+                getUrgencyClass(targetDateStr) {
+                    const today = new Date().toISOString().split('T')[0];
+                    if (!targetDateStr) return '';
+
+                    // Simple string comparison for YYYY-MM-DD works
+                    if (targetDateStr < today) return 'border-l-red-500 bg-red-50'; // Overdue
+                    if (targetDateStr === today) return 'border-l-orange-400 bg-orange-50'; // Today
+                    return 'border-l-green-400'; // Future
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    return new Date(dateStr).toLocaleDateString('ja-JP');
+                },
+                printOrder(order) {
+                    this.printingOrder = order;
+                    // Wait for Vue to update DOM then print
+                    this.$nextTick(() => {
+                        window.print();
+                        // Optional: Reset printingOrder after print dialog closes
+                        // But browser blocking structure makes this tricky, 
+                        // usually fine to leave or user navigates away.
+                    });
+                },
+
+                // --- Demo Utils ---
+                generateDemoData() {
+                    const demoOrders = [
+                        { id: crypto.randomUUID(), requester: '大阪営業所', address: '大阪府大阪市北区...', targetDate: new Date().toISOString().split('T')[0], status: '未処理', items: [{ jan: '4901234567890', name: 'プレミアム緑茶', qty: 10 }] },
+                        { id: crypto.randomUUID(), requester: '福岡営業所', address: '福岡県福岡市博多区...', targetDate: '2023-12-01', status: '未処理', items: [{ jan: '4901234567893', name: 'コーヒー', qty: 5 }] } // Overdue example
+                    ];
+                    this.orders.push(...demoOrders);
+                    this.saveLocalOrders();
+                },
+                saveLocalOrders() {
+                    localStorage.setItem('demo_orders', JSON.stringify(this.orders));
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
