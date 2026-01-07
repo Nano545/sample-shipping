@@ -69,15 +69,15 @@
 
     // --- CONSTANTS ---
     const SAMPLE_PRODUCTS = [
-        { jan: '4901234567890', name: '繝励Ξ繝溘い繝邱題幻 500ml', tempQty: 1 },
-        { jan: '4901234567891', name: '鬥吶・縺礼私邀ｳ闌ｶ 500ml', tempQty: 1 },
-        { jan: '4901234567892', name: '迚ｹ驕ｸ繧ｸ繝｣繧ｹ繝溘Φ闌ｶ 500ml', tempQty: 1 },
-        { jan: '4901234567893', name: '豼・字繝悶Λ繝・け繧ｳ繝ｼ繝偵・ 280ml', tempQty: 1 },
-        { jan: '4901234567894', name: '蠕ｮ邉悶き繝輔ぉ繧ｪ繝ｬ 280ml', tempQty: 1 },
-        { jan: '4501234567800', name: '繝ｪ繝輔Ξ繝・す繝･繝ｻ繝ｬ繝｢繝ｳ 500ml', tempQty: 1 },
+        { jan: '4901234567890', name: 'プレミアム緑茶 500ml', tempQty: 1 },
+        { jan: '4901234567891', name: '香ばし玄米茶 500ml', tempQty: 1 },
+        { jan: '4901234567892', name: '特選ジャスミン茶 500ml', tempQty: 1 },
+        { jan: '4901234567893', name: '濃厚ブラックコーヒー 280ml', tempQty: 1 },
+        { jan: '4901234567894', name: '微糖カフェオレ 280ml', tempQty: 1 },
+        { jan: '4501234567800', name: 'リフレッシュ・レモン 500ml', tempQty: 1 },
     ];
 
-    const REQUESTER_LIST = ['譚ｱ譁ｹ', '螻ｱ譛ｬ', '遶ｹ逕ｰ', '蟆丞ｷ・, '蟯｡譛ｬ'];
+    const REQUESTER_LIST = ['東方', '山本', '竹田', '小川', '岡本'];
 
     // --- GLOBAL ERROR HANDLER ---
     window.onerror = function (msg, url, lineNo, columnNo, error) {
@@ -136,7 +136,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    SampleRequest <span class="text-sm font-normal opacity-80 ml-2">| 豕ｨ譁・ヵ繧ｩ繝ｼ繝</span>
+                    SampleRequest <span class="text-sm font-normal opacity-80 ml-2">| 注文フォーム</span>
                 </h1>
                 <div class="text-xs font-medium opacity-80 hidden sm:block">
                     {{ gasApiUrl ? 'Connected' : 'Demo Mode' }}
@@ -154,15 +154,15 @@
                 <!-- Left: Product Selection -->
                 <div class="lg:col-span-2 space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-indigo-500">
-                        <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">蝠・刀驕ｸ謚・/h2>
+                        <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">商品選択</h2>
 
                         <!-- Search -->
                         <div class="mb-4 flex gap-2">
-                            <input type="text" v-model="searchQuery" placeholder="蝠・刀蜷阪∪縺溘・JAN繧ｳ繝ｼ繝峨〒讀懃ｴ｢..."
+                            <input type="text" v-model="searchQuery" placeholder="商品名またはJANコードで検索..."
                                 class="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition shadow-sm">
                             <button v-if="searchQuery" @click="searchQuery = ''"
                                 class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition font-bold shadow-sm">
-                                繝ｪ繧ｻ繝・ヨ
+                                リセット
                             </button>
                         </div>
 
@@ -186,7 +186,7 @@
                                     </div>
                                     <button @click="addToCart(product)"
                                         class="bg-indigo-600 text-white px-5 py-2 rounded-md text-sm font-bold shadow-md hover:bg-indigo-700 hover:shadow-lg transition transform active:scale-95">
-                                        霑ｽ蜉
+                                        追加
                                     </button>
                                 </div>
                             </div>
@@ -199,14 +199,14 @@
                     <!-- Cart -->
                     <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-indigo-400">
                         <h2 class="text-lg font-bold mb-4 text-gray-800 flex justify-between items-center">
-                            萓晞ｼ繝ｪ繧ｹ繝・
+                            依頼リスト
                             <span class="bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded-full font-bold">{{
-                                cartTotalItems }} 轤ｹ</span>
+                                cartTotalItems }} 点</span>
                         </h2>
 
                         <div v-if="cart.length === 0"
                             class="text-center py-10 text-gray-400 text-sm bg-gray-50 rounded-lg border-dashed border-2 border-gray-200">
-                            蝠・刀縺碁∈謚槭＆繧後※縺・∪縺帙ｓ
+                            商品が選択されていません
                         </div>
                         <ul v-else class="space-y-3 mb-6 max-h-[300px] overflow-y-auto scroller">
                             <li v-for="(item, index) in cart" :key="index"
@@ -218,7 +218,7 @@
                                 <div class="flex items-center gap-4">
                                     <span class="font-bold text-indigo-600 text-lg">x{{ item.qty }}</span>
                                     <button @click="removeFromCart(index)"
-                                        class="text-gray-400 hover:text-red-500 transition p-1" title="蜑企勁">
+                                        class="text-gray-400 hover:text-red-500 transition p-1" title="削除">
                                         &times;
                                     </button>
                                 </div>
@@ -228,75 +228,75 @@
 
                     <!-- Request Form -->
                     <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-gray-300">
-                        <h2 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">騾∽ｻ伜・諠・ｱ</h2>
+                        <h2 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">送付先情報</h2>
                         <form @submit.prevent="confirmSubmit" class="space-y-5">
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-1">逋ｺ豕ｨ諡・ｽ楢・錐 <span
+                                <label class="block text-sm font-bold text-gray-700 mb-1">発注担当者名 <span
                                         class="text-red-500">*</span></label>
                                 <select v-model="form.requester" required
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white shadow-sm">
-                                    <option value="" disabled>驕ｸ謚槭＠縺ｦ縺上□縺輔＞</option>
+                                    <option value="" disabled>選択してください</option>
                                     <option v-for="name in requesterList" :key="name" :value="name">{{ name }}</option>
                                 </select>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-1">邏榊刀謖・ｮ壽律 <span
+                                    <label class="block text-sm font-bold text-gray-700 mb-1">納品指定日 <span
                                             class="text-red-500">*</span></label>
                                     <input type="date" v-model="form.targetDate" required
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-1">驟埼∵凾髢・<span
+                                    <label class="block text-sm font-bold text-gray-700 mb-1">配送時間 <span
                                             class="text-red-500">*</span></label>
                                     <select v-model="form.timeSlot" required
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white shadow-sm">
-                                        <option value="">謖・ｮ壹↑縺・/option>
-                                        <option value="AM">蜊亥燕</option>
-                                        <option value="PM">蜊亥ｾ・/option>
+                                        <option value="">指定なし</option>
+                                        <option value="AM">午前</option>
+                                        <option value="PM">午後</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                <label class="block text-sm font-bold text-gray-700 mb-3 border-b pb-1">驟埼∝・隧ｳ邏ｰ</label>
+                                <label class="block text-sm font-bold text-gray-700 mb-3 border-b pb-1">配送先詳細</label>
                                 <div class="grid grid-cols-3 gap-3 mb-3">
                                     <div class="col-span-1">
-                                        <label class="block text-xs font-semibold text-gray-500 mb-1">驛ｵ萓ｿ逡ｪ蜿ｷ</label>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">郵便番号</label>
                                         <input type="text" v-model="form.zip" placeholder="123-4567"
                                             class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-sm">
                                     </div>
                                     <div class="col-span-2">
-                                        <label class="block text-xs font-semibold text-gray-500 mb-1">髮ｻ隧ｱ逡ｪ蜿ｷ</label>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">電話番号</label>
                                         <input type="tel" v-model="form.phone" placeholder="090-1234-5678"
                                             class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-sm">
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">菴乗園 <span
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">住所 <span
                                             class="text-red-500">*</span></label>
-                                    <input type="text" v-model="form.address" required placeholder="驛ｽ驕灘ｺ懃恁 蟶ょ玄逕ｺ譚・逡ｪ蝨ｰ 繝薙Ν蜷・
+                                    <input type="text" v-model="form.address" required placeholder="都道府県 市区町村 番地 ビル名"
                                         class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-sm">
                                 </div>
                                 <div class="mb-1">
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">螳帛錐・磯∽ｻ伜・蜷搾ｼ・span
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">宛名（送付先名）<span
                                             class="text-red-500">*</span></label>
-                                    <input type="text" v-model="form.targetName" required placeholder="笳銀雷蟾･蝣ｴ 蠕｡荳ｭ"
+                                    <input type="text" v-model="form.targetName" required placeholder="○○工場 御中"
                                         class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-sm">
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-1">蛯呵・/label>
-                                <textarea v-model="form.remarks" rows="2" placeholder="蜿匁桶豕ｨ諢上∝壕蜑堺ｸｭ謖・ｮ壹↑縺ｩ"
+                                <label class="block text-sm font-bold text-gray-700 mb-1">備考</label>
+                                <textarea v-model="form.remarks" rows="2" placeholder="取扱注意、午前中指定など"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm"></textarea>
                             </div>
 
                             <button type="submit" :disabled="isSubmitting || cart.length === 0"
                                 class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-md hover:bg-indigo-700 hover:shadow-xl disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed transition transform active:scale-[0.98]">
-                                <span v-if="isSubmitting">騾∽ｿ｡荳ｭ...</span>
-                                <span v-else>萓晞ｼ繧帝∽ｿ｡縺吶ｋ</span>
+                                <span v-if="isSubmitting">送信中...</span>
+                                <span v-else>依頼を送信する</span>
                             </button>
                         </form>
                     </div>
@@ -309,16 +309,16 @@
             class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[9999]"
             @click.self="showConfirmModal = false">
             <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-all scale-100">
-                <h3 class="text-xl font-bold text-gray-900 mb-2">騾∽ｿ｡遒ｺ隱・/h3>
-                <p class="text-gray-600 mb-6">縺薙・蜀・ｮｹ縺ｧ萓晞ｼ繧帝∽ｿ｡縺励※繧ゅｈ繧阪＠縺・〒縺吶°・・/p>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">送信確認</h3>
+                <p class="text-gray-600 mb-6">この内容で依頼を送信してもよろしいですか？</p>
                 <div class="flex gap-4">
                     <button @click="showConfirmModal = false"
                         class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">
-                        繧ｭ繝｣繝ｳ繧ｻ繝ｫ
+                        キャンセル
                     </button>
                     <button @click="submitOrder"
                         class="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-md transition">
-                        騾∽ｿ｡縺吶ｋ
+                        送信する
                     </button>
                 </div>
             </div>
@@ -377,11 +377,11 @@
                             if (data.status !== 'error' && data.products) {
                                 this.products = data.products.map(p => ({ ...p, tempQty: 1 }));
                             } else {
-                                this.showMessage('繝・Δ繝・・繧ｿ繧剃ｽｿ逕ｨ荳ｭ (API謗･邯壹↑縺・繧ｨ繝ｩ繝ｼ)', 'warning');
+                                this.showMessage('デモデータを使用中 (API接続なし/エラー)', 'warning');
                             }
                         } catch (e) {
                             console.warn('API Error, using demo data', e);
-                            this.showMessage('騾壻ｿ｡繧ｨ繝ｩ繝ｼ: 繝・Δ繝｢繝ｼ繝峨〒蜍穂ｽ懊＠縺ｾ縺・, 'error');
+                            this.showMessage('通信エラー: デモモードで動作します', 'error');
                         }
                     }
                 },
@@ -402,7 +402,7 @@
                         this.cart.push({ jan: product.jan, name: product.name, qty: product.tempQty });
                     }
                     product.tempQty = 1;
-                    this.showMessage(`繧ｫ繝ｼ繝医↓霑ｽ蜉: ${product.name}`);
+                    this.showMessage(`カートに追加: ${product.name}`);
                 },
                 removeFromCart(index) {
                     this.cart.splice(index, 1);
@@ -441,17 +441,17 @@
                             });
                             const result = await res.json();
                             if (result.status === 'error') throw new Error(result.message);
-                            this.showMessage('豕ｨ譁・ｒ騾∽ｿ｡縺励∪縺励◆・・);
+                            this.showMessage('注文を送信しました！');
                             this.resetForm();
                         } catch (e) {
                             console.error(e);
-                            this.showMessage('騾∽ｿ｡繧ｨ繝ｩ繝ｼ: ' + e.message, 'error');
+                            this.showMessage('送信エラー: ' + e.message, 'error');
                         }
                     } else {
                         // Demo
                         await new Promise(r => setTimeout(r, 800));
                         console.log('Demo Submit:', payload);
-                        this.showMessage('繝・Δ豕ｨ譁・ｒ騾∽ｿ｡縺励∪縺励◆');
+                        this.showMessage('デモ注文を送信しました');
                         this.resetForm();
                     }
                     this.isSubmitting = false;
