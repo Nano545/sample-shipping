@@ -298,107 +298,205 @@
                                     <span class="font-bold">{{ order.items.reduce((sum, i) => sum + i.qty, 0) }}</span>
                                     個の商品
                                 </div>
-                                個の商品
+
+                                <div v-if="order.remarks"
+                                    class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mb-3 flex items-start gap-1">
+                                    <span class="font-bold">注:</span> {{ order.remarks.length > 20 ?
+                                    order.remarks.slice(0,20)+'...' : order.remarks }}
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click.stop="updateStatus(order, '未処理')"
+                                        class="flex-1 py-1.5 bg-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-300">
+                                        &lt;- 戻す
+                                    </button>
+                                    <button @click.stop="updateStatus(order, '完了')"
+                                        class="flex-1 py-1.5 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">
+                                        発送完了 ->
+                                    </button>
+                                </div>
                             </div>
-                            <div v-if="order.remarks"
-                                class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mb-3 flex items-start gap-1">
-                                <span class="font-bold">注:</span> {{ order.remarks.length > 20 ?
-                                order.remarks.slice(0,20)+'...' : order.remarks }}
-                            </div>
-                            <div class="flex gap-2">
-                                <button @click.stop="updateStatus(order, '未処理')"
-                                    class="flex-1 py-1.5 bg-gray-200 text-gray-600 text-xs font-bold rounded hover:bg-gray-300">
-                                    &lt;- 戻す
-                                </button>
-                                <button @click.stop="updateStatus(order, '完了')"
-                                    class="flex-1 py-1.5 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">
-                                    発送完了 ->
-                                </button>
+                        </div>
+                    </div>
+
+                    <!-- Column: Completed -->
+                    <div class="flex flex-col bg-gray-50 rounded-xl p-4 h-[calc(100vh-180px)]">
+                        <h3 class="font-bold text-gray-500 mb-4 flex items-center justify-between">
+                            完了
+                            <span class="bg-gray-200 px-2 py-0.5 rounded-full text-xs">{{ completedOrders.length
+                                }}</span>
+                        </h3>
+                        <div class="space-y-3 overflow-y-auto scroller flex-grow pr-1 opacity-75">
+                            <div v-for="order in completedOrders" :key="order.id"
+                                class="bg-white p-3 rounded-lg border border-gray-100">
+                                <div class="flex justify-between">
+                                    <span class="text-xs font-mono text-gray-400">#{{ order.id.slice(0,6) }}</span>
+                                    <span
+                                        class="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Sent</span>
+                                </div>
+                                <div class="text-sm font-medium text-gray-600 mt-1">{{ order.requester }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Column: Completed -->
-                <div class="flex flex-col bg-gray-50 rounded-xl p-4 h-[calc(100vh-180px)]">
-                    <h3 class="font-bold text-gray-500 mb-4 flex items-center justify-between">
-                        完了
-                        <span class="bg-gray-200 px-2 py-0.5 rounded-full text-xs">{{ completedOrders.length
-                            }}</span>
-                    </h3>
-                    <div class="space-y-3 overflow-y-auto scroller flex-grow pr-1 opacity-75">
-                        <div v-for="order in completedOrders" :key="order.id"
-                            class="bg-white p-3 rounded-lg border border-gray-100">
-                            <div class="flex justify-between">
-                                <span class="text-xs font-mono text-gray-400">#{{ order.id.slice(0,6) }}</span>
-                                <span class="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Sent</span>
+                <!-- Order Details Modal -->
+                <div v-if="selectedOrder"
+                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    @click.self="selectedOrder = null">
+                    <div
+                        class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">注文詳細</h3>
+                                <p class="text-xs text-gray-500 font-mono">ID: {{ selectedOrder.id }}</p>
                             </div>
-                            <div class="text-sm font-medium text-gray-600 mt-1">{{ order.requester }}</div>
+                            <button @click="selectedOrder = null"
+                                class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                        </div>
+
+                        <!-- Modal Body -->
+                        <div class="p-6 overflow-y-auto">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">発注者</label>
+                                    <div class="mt-1 text-lg font-medium">{{ selectedOrder.requester }}</div>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">納品指定日</label>
+                                    <div class="mt-1 text-lg font-medium flex items-center gap-2">
+                                        {{ formatDate(selectedOrder.targetDate) }}
+                                        <span v-if="getUrgencyClass(selectedOrder.targetDate).includes('red')"
+                                            class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold">期限切れ</span>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">送付先住所</label>
+                                    <div class="mt-1 text-gray-800 whitespace-pre-wrap bg-gray-50 p-3 rounded border">{{
+                                        selectedOrder.address }}</div>
+                                </div>
+                                <div class="md:col-span-2" v-if="selectedOrder.remarks">
+                                    <label class="text-xs font-bold text-orange-600 uppercase tracking-wide">備考</label>
+                                    <div
+                                        class="mt-1 text-gray-800 whitespace-pre-wrap bg-orange-50 p-3 rounded border border-orange-100">
+                                        {{ selectedOrder.remarks }}</div>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-4">
+                                <label class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 block">商品明細
+                                    ({{ selectedOrder.items.length }}点)</label>
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-left">
+                                            <th class="p-2 rounded-l">商品名</th>
+                                            <th class="p-2">JAN</th>
+                                            <th class="p-2 text-right rounded-r">数量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, i) in selectedOrder.items" :key="i"
+                                            class="border-b last:border-0 hover:bg-gray-50">
+                                            <td class="p-2 font-medium">{{ item.name }}</td>
+                                            <td class="p-2 text-gray-500 font-mono text-xs">{{ item.jan }}</td>
+                                            <td class="p-2 text-right font-bold">x{{ item.qty }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
+                            <button @click="printOrder(selectedOrder)"
+                                class="text-gray-600 hover:text-gray-900 flex items-center gap-1 text-sm font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                印刷
+                            </button>
+                            <div class="flex gap-3">
+                                <button v-if="selectedOrder.status !== '未処理'"
+                                    @click="updateStatus(selectedOrder, '未処理'); selectedOrder = null"
+                                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 font-medium text-sm transition">
+                                    未処理に戻す
+                                </button>
+                                <button v-if="selectedOrder.status === '未処理'"
+                                    @click="updateStatus(selectedOrder, '確認済み'); selectedOrder = null"
+                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-medium text-sm shadow-sm transition">
+                                    確認済み（ピッキング）にする
+                                </button>
+                                <button v-if="selectedOrder.status === '確認済み'"
+                                    @click="updateStatus(selectedOrder, '完了'); selectedOrder = null"
+                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-medium text-sm shadow-sm transition">
+                                    完了（発送済）にする
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-    </div>
 
-    <!-- Print Layout (Invisible on Screen) -->
-    <div id="print-area" class="print-only p-8">
-        <div v-if="printingOrder" class="print-page-break">
-            <div class="text-center mb-8 border-b-2 border-black pb-4">
-                <h1 class="text-3xl font-bold mb-2">サンプル出荷依頼書</h1>
-                <p class="text-sm">注文ID: {{ printingOrder.id }}</p>
-                <p class="text-sm">発行日: {{ new Date().toLocaleDateString('ja-JP') }}</p>
-            </div>
+            <!-- Print Layout (Invisible on Screen) -->
+            <div id="print-area" class="print-only p-8">
+                <div v-if="printingOrder" class="print-page-break">
+                    <div class="text-center mb-8 border-b-2 border-black pb-4">
+                        <h1 class="text-3xl font-bold mb-2">サンプル出荷依頼書</h1>
+                        <p class="text-sm">注文ID: {{ printingOrder.id }}</p>
+                        <p class="text-sm">発行日: {{ new Date().toLocaleDateString('ja-JP') }}</p>
+                    </div>
 
-            <div class="grid grid-cols-2 gap-8 mb-8">
-                <div class="border p-4">
-                    <h3 class="font-bold border-b mb-2">発注元</h3>
-                    <p class="text-lg">{{ printingOrder.requester }}</p>
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div class="border p-4">
+                            <h3 class="font-bold border-b mb-2">発注元</h3>
+                            <p class="text-lg">{{ printingOrder.requester }}</p>
+                        </div>
+                        <div class="border p-4 bg-gray-50">
+                            <h3 class="font-bold border-b mb-2">納品指定日</h3>
+                            <p class="text-xl font-bold">{{ formatDate(printingOrder.targetDate) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-8 p-4 border rounded">
+                        <h3 class="font-bold border-b mb-2">送付先</h3>
+                        <p class="whitespace-pre-wrap text-lg">{{ printingOrder.address }}</p>
+                    </div>
+
+                    <div v-if="printingOrder.remarks" class="mb-8 p-4 border rounded bg-gray-50">
+                        <h3 class="font-bold border-b mb-2">備考</h3>
+                        <p class="whitespace-pre-wrap text-lg">{{ printingOrder.remarks }}</p>
+                    </div>
+
+                    <table class="w-full border-collapse border border-black mb-8">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-black p-2 w-16">✔</th>
+                                <th class="border border-black p-2 text-left">JANコード</th>
+                                <th class="border border-black p-2 text-left">商品名</th>
+                                <th class="border border-black p-2 w-24">数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, i) in printingOrder.items" :key="i">
+                                <td class="border border-black p-2 text-center">
+                                    <div class="w-4 h-4 border border-black mx-auto"></div>
+                                </td>
+                                <td class="border border-black p-2 font-mono">{{ item.jan }}</td>
+                                <td class="border border-black p-2">{{ item.name }}</td>
+                                <td class="border border-black p-2 text-center font-bold text-lg">{{ item.qty }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="border-t-2 border-black pt-4 mt-12 flex justify-between text-sm">
+                        <div>確認者: ________________</div>
+                        <div>出荷日: ____年__月__日</div>
+                    </div>
                 </div>
-                <div class="border p-4 bg-gray-50">
-                    <h3 class="font-bold border-b mb-2">納品指定日</h3>
-                    <p class="text-xl font-bold">{{ formatDate(printingOrder.targetDate) }}</p>
-                </div>
             </div>
 
-            <div class="mb-8 p-4 border rounded">
-                <h3 class="font-bold border-b mb-2">送付先</h3>
-                <p class="whitespace-pre-wrap text-lg">{{ printingOrder.address }}</p>
-            </div>
-
-            <div v-if="printingOrder.remarks" class="mb-8 p-4 border rounded bg-gray-50">
-                <h3 class="font-bold border-b mb-2">備考</h3>
-                <p class="whitespace-pre-wrap text-lg">{{ printingOrder.remarks }}</p>
-            </div>
-
-            <table class="w-full border-collapse border border-black mb-8">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border border-black p-2 w-16">✔</th>
-                        <th class="border border-black p-2 text-left">JANコード</th>
-                        <th class="border border-black p-2 text-left">商品名</th>
-                        <th class="border border-black p-2 w-24">数量</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(item, i) in printingOrder.items" :key="i">
-                        <td class="border border-black p-2 text-center">
-                            <div class="w-4 h-4 border border-black mx-auto"></div>
-                        </td>
-                        <td class="border border-black p-2 font-mono">{{ item.jan }}</td>
-                        <td class="border border-black p-2">{{ item.name }}</td>
-                        <td class="border border-black p-2 text-center font-bold text-lg">{{ item.qty }}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="border-t-2 border-black pt-4 mt-12 flex justify-between text-sm">
-                <div>確認者: ________________</div>
-                <div>出荷日: ____年__月__日</div>
-            </div>
-        </div>
-    </div>
-
-    </main>
+        </main>
     </div>
 
     <script>
