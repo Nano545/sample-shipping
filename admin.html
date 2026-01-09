@@ -115,6 +115,18 @@
             const list = detailsFrom || SAMPLE_PRODUCTS;
             const p = list[Math.floor(Math.random() * list.length)];
             return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
+        },
+        // Address Search Proxy
+        async searchAddress(zip) {
+            if (!GAS_API_URL) return { status: 'error', message: 'API URL not set' };
+            try {
+                const res = await fetch(`${GAS_API_URL}?action=searchAddress&zip=${zip}`);
+                const data = await res.json();
+                return data;
+            } catch (e) {
+                console.error('Address Search Error:', e);
+                return { status: 'error', message: e.toString() };
+            }
         }
     };
 </script>
