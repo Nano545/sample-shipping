@@ -506,11 +506,15 @@
                     this.isSearching = true;
                     try {
                         const result = await AppUtils.searchAddress(this.form.zip);
-                        if (result.status === 'success' && result.found) {
-                            this.form.addressAuto = result.address;
-                            this.showMessage('住所を検索しました');
+                        if (result.status === 'success') {
+                            if (result.found) {
+                                this.form.addressAuto = result.address;
+                                this.showMessage('住所を検索しました');
+                            } else {
+                                this.showMessage('該当する住所が見つかりませんでした', 'warning');
+                            }
                         } else {
-                            this.showMessage('住所が見つかりませんでした', 'warning');
+                            this.showMessage(`検索エラー: ${result.message}`, 'error');
                         }
                     } catch (e) {
                         this.showMessage('検索エラー', 'error');
