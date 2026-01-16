@@ -299,8 +299,8 @@
                                                 検索
                                             </button>
                                             <button type="button" @click="clearAddress"
-                                                v-if="form.zip || form.addressAuto"
-                                                class="bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 whitespace-nowrap"
+                                                :disabled="!form.zip && !form.addressAuto && !form.addressDetail"
+                                                class="bg-gray-100 text-gray-600 border border-gray-300 px-3 py-1 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                                 title="郵便番号と住所をクリア">
                                                 クリア
                                             </button>
