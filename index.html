@@ -117,12 +117,27 @@
             return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
         },
         // Address Search Proxy
+        // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
         async searchAddress(zip) {
-            if (!GAS_API_URL) return { status: 'error', message: 'API URL not set' };
+            // Using zipcloud API directly
+            const url = `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`;
             try {
-                const res = await fetch(`${GAS_API_URL}?action=searchAddress&zip=${zip}`);
+                const res = await fetch(url);
                 const data = await res.json();
-                return data;
+
+                if (data.status === 200 && data.results) {
+                    const r = data.results[0];
+                    return {
+                        status: 'success',
+                        found: true,
+                        address: `${r.address1}${r.address2}${r.address3}`,
+                        details: r
+                    };
+                } else if (data.status === 200 && !data.results) {
+                    return { status: 'success', found: false };
+                } else {
+                    return { status: 'error', message: `API Status: ${data.status} - ${data.message || ''}` };
+                }
             } catch (e) {
                 console.error('Address Search Error:', e);
                 return { status: 'error', message: e.toString() };
@@ -282,6 +297,12 @@
                                             <button type="button" @click="handleAddressSearch" :disabled="isSearching"
                                                 class="bg-slate-700 text-white px-3 py-1 rounded text-xs font-bold hover:bg-slate-600 disabled:bg-gray-400 whitespace-nowrap">
                                                 検索
+                                            </button>
+                                            <button type="button" @click="clearAddress"
+                                                v-if="form.zip || form.addressAuto"
+                                                class="bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 whitespace-nowrap"
+                                                title="郵便番号と住所をクリア">
+                                                クリア
                                             </button>
                                         </div>
                                     </div>
@@ -520,6 +541,12 @@
                         this.showMessage('検索エラー', 'error');
                     }
                     this.isSearching = false;
+                },
+                clearAddress() {
+                    this.form.zip = '';
+                    this.form.addressAuto = '';
+                    this.form.addressDetail = '';
+                    this.showMessage('住所情報をクリアしました');
                 }
             }
         }).mount('#requester-app');
