@@ -117,12 +117,174 @@
             return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
         },
         // Address Search Proxy
+        // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
         async searchAddress(zip) {
-            if (!GAS_API_URL) return { status: 'error', message: 'API URL not set' };
+            // Using zipcloud API directly
+            const url = `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`;
             try {
-                const res = await fetch(`${GAS_API_URL}?action=searchAddress&zip=${zip}`);
+                const res = await fetch(url);
                 const data = await res.json();
-                return data;
+
+                if (data.status === 200 && data.results) {
+                    const r = data.results[0];
+                    return {
+                        status: 'success',
+                        found: true,
+                        address: `${r.address1}${r.address2}${r.address3}`,
+                        details: r
+                    };
+                } else if (data.status === 200 && !data.results) {
+                    return { status: 'success', found: false };
+                } else {
+                    return { status: 'error', message: `API Status: ${data.status} - ${data.message || ''}` };
+                }
+            } catch (e) {
+                console.error('Address Search Error:', e);
+                return { status: 'error', message: e.toString() };
+            }
+        }
+    };
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sample Request Manager</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Vue.js 3 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Print Styles */
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .print-only {
+            display: block !important;
+        }
+
+        body {
+            background: white;
+            color: black;
+        }
+
+        .print-page-break {
+            page-break-before: always;
+        }
+
+        /* Reset Kanban layout for print to list */
+        .kanban-board {
+            display: block;
+        }
+
+        .kanban-card {
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+            break-inside: avoid;
+        }
+    }
+
+    @media screen {
+        .print-only {
+            display: none !important;
+        }
+    }
+
+    /* Custom Scrollbar for Kanban columns */
+    .scroller::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .scroller::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .scroller::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+</style>
+<script>
+    // --- CONFIGURATION ---
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysGWGp3gKKdiT46ONGkhPzJ595ZqSg2sUVmpNbD-76alLhbikUHGZ0ttEaKKTmOJBC/exec';
+
+    // --- CONSTANTS ---
+    const SAMPLE_PRODUCTS = [
+        { jan: '4901234567890', name: 'プレミアム緑茶 500ml', tempQty: 1 },
+        { jan: '4901234567891', name: '香ばし玄米茶 500ml', tempQty: 1 },
+        { jan: '4901234567892', name: '特選ジャスミン茶 500ml', tempQty: 1 },
+        { jan: '4901234567893', name: '濃厚ブラックコーヒー 280ml', tempQty: 1 },
+        { jan: '4901234567894', name: '微糖カフェオレ 280ml', tempQty: 1 },
+        { jan: '4501234567800', name: 'リフレッシュ・レモン 500ml', tempQty: 1 },
+    ];
+
+    const REQUESTER_LIST = ['東方', '山本', '竹田', '小川', '岡本'];
+
+    // --- GLOBAL ERROR HANDLER ---
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+        console.error('Global Error:', msg, url, lineNo, error);
+        const errorDiv = document.getElementById('error-display') || document.createElement('div');
+        errorDiv.id = 'error-display';
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.bottom = '0';
+        errorDiv.style.left = '0';
+        errorDiv.style.right = '0';
+        errorDiv.style.backgroundColor = 'red';
+        errorDiv.style.color = 'white';
+        errorDiv.style.padding = '10px';
+        errorDiv.style.zIndex = '9999';
+        errorDiv.innerHTML = `<strong>Error:</strong> ${msg} (Line: ${lineNo})`;
+        document.body.appendChild(errorDiv);
+        return false;
+    };
+
+    // --- UTILS OBJECT ---
+    const AppUtils = {
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleDateString('ja-JP');
+        },
+        getUrgencyClass(targetDateStr) {
+            const today = new Date().toISOString().split('T')[0];
+            if (!targetDateStr) return '';
+            if (targetDateStr < today) return 'border-l-red-500 bg-red-50'; // Overdue
+            if (targetDateStr === today) return 'border-l-orange-400 bg-orange-50'; // Today
+            return 'border-l-green-400'; // Future
+        },
+        // Helper to pick a random product for demo
+        pickRandomProduct(detailsFrom) {
+            const list = detailsFrom || SAMPLE_PRODUCTS;
+            const p = list[Math.floor(Math.random() * list.length)];
+            return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
+        },
+        // Address Search Proxy
+        // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
+        async searchAddress(zip) {
+            // Using zipcloud API directly
+            const url = `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.status === 200 && data.results) {
+                    const r = data.results[0];
+                    return {
+                        status: 'success',
+                        found: true,
+                        address: `${r.address1}${r.address2}${r.address3}`,
+                        details: r
+                    };
+                } else if (data.status === 200 && !data.results) {
+                    return { status: 'success', found: false };
+                } else {
+                    return { status: 'error', message: `API Status: ${data.status} - ${data.message || ''}` };
+                }
             } catch (e) {
                 console.error('Address Search Error:', e);
                 return { status: 'error', message: e.toString() };
@@ -150,15 +312,28 @@
                     </svg>
                     SampleRequest <span class="text-xs font-mono bg-slate-700 px-2 py-1 rounded ml-2">ADMIN</span>
                 </h1>
+
+                <!-- View Switcher -->
+                <div class="flex bg-slate-700 rounded-lg p-1">
+                    <button @click="currentView = 'kanban'"
+                        :class="`px-4 py-1.5 rounded-md text-sm font-medium transition ${currentView === 'kanban' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`">
+                        カンバン
+                    </button>
+                    <button @click="currentView = 'history'"
+                        :class="`px-4 py-1.5 rounded-md text-sm font-medium transition ${currentView === 'history' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`">
+                        出荷履歴
+                    </button>
+                </div>
+
                 <div class="flex items-center gap-4">
                     <button @click="fetchOrders"
                         class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded transition">
                         更新
                     </button>
-                    <!-- Debug Button (Usually hidden or distinct) -->
+                    <!-- Debug Button -->
                     <button @click="generateDemoData"
                         class="text-xs text-slate-400 hover:text-white border border-slate-600 px-2 py-1 rounded hover:bg-slate-700 transition">
-                        デモデータ作成(Debug)
+                        デモデータ(Debug)
                     </button>
                 </div>
             </div>
@@ -170,8 +345,9 @@
         </header>
 
         <main class="flex-grow w-full px-2 sm:px-4 lg:px-6 py-6 overflow-x-auto print-no-margin">
-            <!-- Kanban Board -->
-            <div class="flex gap-4 min-w-[1000px] h-[calc(100vh-140px)]">
+
+            <!-- VIEW: KANBAN -->
+            <div v-show="currentView === 'kanban'" class="flex gap-4 min-w-[1000px] h-[calc(100vh-140px)]">
                 <!-- Columns -->
                 <div v-for="status in ['未処理', '準備中', '発送済']" :key="status"
                     class="flex-1 bg-slate-200 rounded-xl flex flex-col shadow-inner border border-slate-300">
@@ -206,6 +382,98 @@
                     </div>
                 </div>
             </div>
+
+            <!-- VIEW: HISTORY ANALYSIS -->
+            <div v-show="currentView === 'history'"
+                class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        出荷データ集計
+                    </h2>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg">
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-slate-500 mb-1">期間 (開始)</label>
+                            <input type="date" v-model="filters.startDate"
+                                class="border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-400 focus:outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-slate-500 mb-1">期間 (終了)</label>
+                            <input type="date" v-model="filters.endDate"
+                                class="border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-400 focus:outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-slate-500 mb-1">JAN / 商品名</label>
+                            <input type="text" v-model="filters.keyword" placeholder="検索キーワード..."
+                                class="border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-400 focus:outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-slate-500 mb-1">有機区分</label>
+                            <select v-model="filters.organicType"
+                                class="border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-400 focus:outline-none bg-white">
+                                <option value="">すべて</option>
+                                <option value="有機">有機のみ</option>
+                                <option value="その他">その他 (非有機)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aggregation Result -->
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-slate-700">日次・商品別集計リスト</h3>
+                        <span class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full">
+                            合計数量: {{ totalQuantity }}
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3">出荷日</th>
+                                    <th class="px-4 py-3">JANコード</th>
+                                    <th class="px-4 py-3">商品名</th>
+                                    <th class="px-4 py-3 w-24 text-center">有機区分</th>
+                                    <th class="px-4 py-3 text-right">数量(合計)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="(row, idx) in aggregatedHistory" :key="idx"
+                                    class="hover:bg-slate-50 transition">
+                                    <td class="px-4 py-3 text-slate-800 font-medium">{{ formatDate(row.date) }}</td>
+                                    <td class="px-4 py-3 font-mono text-slate-500">{{ row.jan }}</td>
+                                    <td class="px-4 py-3">{{ row.name }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span v-if="row.organic_type && row.organic_type.includes('有機')"
+                                            class="inline-block px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 font-bold">
+                                            {{ row.organic_type }}
+                                        </span>
+                                        <span v-else-if="row.organic_type" class="text-xs text-slate-500">
+                                            {{ row.organic_type }}
+                                        </span>
+                                        <span v-else class="text-xs text-slate-300">-</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-bold text-slate-700 text-base">{{ row.totalQty
+                                        }}</td>
+                                </tr>
+                                <tr v-if="aggregatedHistory.length === 0">
+                                    <td colspan="5" class="px-4 py-12 text-center text-slate-400">
+                                        データが見つかりません
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <!-- Order Detail Modal -->
@@ -349,16 +617,28 @@
             data() {
                 return {
                     gasApiUrl: GAS_API_URL, // From _utils
+
+                    // Master Data
+                    products: [], // Loaded from API
+                    masterHash: {}, // JAN -> Product Info mapping
                     orders: [],
-                    products: SAMPLE_PRODUCTS, // Used for demo data generation
                     requesterList: REQUESTER_LIST,
 
+                    // UI State
+                    currentView: 'kanban', // 'kanban' | 'history'
                     selectedOrder: null,
                     showStatusConfirmModal: false,
-                    pendingStatusUpdate: null, // { order: ..., newStatus: ... }
-
+                    pendingStatusUpdate: null,
                     message: '',
-                    messageType: 'success'
+                    messageType: 'success',
+
+                    // Filters
+                    filters: {
+                        startDate: '',
+                        endDate: '',
+                        keyword: '',
+                        organicType: ''
+                    }
                 }
             },
             computed: {
@@ -368,14 +648,106 @@
                         if (groups[o.status]) groups[o.status].push(o);
                     });
                     return groups;
+                },
+                // Aggregated History: List of { date, jan, name, organic_type, totalQty }
+                aggregatedHistory() {
+                    // Filter Orders: Status='発送済'
+                    const shippedOrders = this.orders.filter(o => o.status === '発送済');
+
+                    // Filter Logic
+                    const start = this.filters.startDate ? new Date(this.filters.startDate) : null;
+                    const end = this.filters.endDate ? new Date(this.filters.endDate) : null;
+                    const keyword = this.filters.keyword.toLowerCase();
+                    const organicTarget = this.filters.organicType;
+
+                    // Grouping Map key: "YYYY-MM-DD_JAN"
+                    const map = new Map();
+
+                    shippedOrders.forEach(order => {
+                        // Date Filter
+                        const d = new Date(order.targetDate); // Use targetDate as ship date for now
+                        if (start && d < start) return;
+                        if (end && d > end) return;
+
+                        const dateStr = order.targetDate.split('T')[0];
+
+                        order.items.forEach(item => {
+                            // Find Master Info
+                            const master = this.masterHash[item.jan] || {};
+                            const organic = master.organic_type || '';
+                            const name = item.name;
+
+                            // Keyword Filter (JAN or Name)
+                            if (keyword && !item.jan.includes(keyword) && !name.toLowerCase().includes(keyword)) return;
+
+                            // Organic Filter
+                            if (organicTarget === '有機' && !organic.includes('有機')) return;
+                            if (organicTarget === 'その他' && organic.includes('有機')) return;
+
+                            const key = `${dateStr}_${item.jan}`;
+                            if (!map.has(key)) {
+                                map.set(key, {
+                                    date: order.targetDate,
+                                    jan: item.jan,
+                                    name: name,
+                                    organic_type: organic,
+                                    totalQty: 0
+                                });
+                            }
+                            map.get(key).totalQty += Number(item.qty || 0);
+                        });
+                    });
+
+                    // Convert to Array & Sort
+                    return Array.from(map.values()).sort((a, b) => {
+                        // Sort by Date Desc, then JAN
+                        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+                        return a.jan.localeCompare(b.jan);
+                    });
+                },
+                totalQuantity() {
+                    return this.aggregatedHistory.reduce((sum, row) => sum + row.totalQty, 0);
                 }
             },
             async mounted() {
-                await this.fetchOrders();
+                await this.init();
             },
             methods: {
                 formatDate: AppUtils.formatDate,
                 getUrgencyClass: AppUtils.getUrgencyClass,
+
+                async init() {
+                    await Promise.all([
+                        this.fetchProducts(),
+                        this.fetchOrders()
+                    ]);
+                },
+
+                async fetchProducts() {
+                    if (!this.gasApiUrl) {
+                        this.products = SAMPLE_PRODUCTS; // Fallback
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`${this.gasApiUrl}?action=products`);
+                        const data = await res.json();
+                        if (data.status === 'success') {
+                            this.products = data.products;
+                            // Build Hash for easy lookup
+                            const hash = {};
+                            this.products.forEach(p => {
+                                hash[p.jan] = p;
+                            });
+                            this.masterHash = hash;
+                        }
+                    } catch (e) {
+                        console.error('Products Fetch Error', e);
+                        // fallback to sample if needed
+                        const hash = {};
+                        SAMPLE_PRODUCTS.forEach(p => hash[p.jan] = p);
+                        this.masterHash = hash;
+                    }
+                },
 
                 async fetchOrders() {
                     if (this.gasApiUrl) {
@@ -473,7 +845,7 @@
                 generateDemoData() {
                     // simplified demo gen for admin if list is empty
                     const today = new Date().toISOString().split('T')[0];
-                    const pick = () => AppUtils.pickRandomProduct(this.products);
+                    const pick = () => AppUtils.pickRandomProduct(this.products.length ? this.products : SAMPLE_PRODUCTS);
                     const newOrder = {
                         id: crypto.randomUUID(),
                         requester: 'DemoShipper',
