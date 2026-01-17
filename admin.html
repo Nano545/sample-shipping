@@ -41,152 +41,46 @@
             margin-bottom: 20px;
             break-inside: avoid;
         }
-    }
 
-    @media screen {
-        .print-only {
-            display: none !important;
-        }
-    }
-
-    /* Custom Scrollbar for Kanban columns */
-    .scroller::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .scroller::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-
-    .scroller::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-    }
-</style>
-<script>
-    // --- CONFIGURATION ---
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysGWGp3gKKdiT46ONGkhPzJ595ZqSg2sUVmpNbD-76alLhbikUHGZ0ttEaKKTmOJBC/exec';
-
-    // --- CONSTANTS ---
-    const SAMPLE_PRODUCTS = [
-        { jan: '4901234567890', name: 'プレミアム緑茶 500ml', tempQty: 1 },
-        { jan: '4901234567891', name: '香ばし玄米茶 500ml', tempQty: 1 },
-        { jan: '4901234567892', name: '特選ジャスミン茶 500ml', tempQty: 1 },
-        { jan: '4901234567893', name: '濃厚ブラックコーヒー 280ml', tempQty: 1 },
-        { jan: '4901234567894', name: '微糖カフェオレ 280ml', tempQty: 1 },
-        { jan: '4501234567800', name: 'リフレッシュ・レモン 500ml', tempQty: 1 },
-    ];
-
-    const REQUESTER_LIST = ['東方', '山本', '竹田', '小川', '岡本'];
-
-    // --- GLOBAL ERROR HANDLER ---
-    window.onerror = function (msg, url, lineNo, columnNo, error) {
-        console.error('Global Error:', msg, url, lineNo, error);
-        const errorDiv = document.getElementById('error-display') || document.createElement('div');
-        errorDiv.id = 'error-display';
-        errorDiv.style.position = 'fixed';
-        errorDiv.style.bottom = '0';
-        errorDiv.style.left = '0';
-        errorDiv.style.right = '0';
-        errorDiv.style.backgroundColor = 'red';
-        errorDiv.style.color = 'white';
-        errorDiv.style.padding = '10px';
-        errorDiv.style.zIndex = '9999';
-        errorDiv.innerHTML = `<strong>Error:</strong> ${msg} (Line: ${lineNo})`;
-        document.body.appendChild(errorDiv);
-        return false;
-    };
-
-    // --- UTILS OBJECT ---
-    const AppUtils = {
-        formatDate(dateStr) {
-            if (!dateStr) return '';
-            return new Date(dateStr).toLocaleDateString('ja-JP');
-        },
-        getUrgencyClass(targetDateStr) {
-            const today = new Date().toISOString().split('T')[0];
-            if (!targetDateStr) return '';
-            if (targetDateStr < today) return 'border-l-red-500 bg-red-50'; // Overdue
-            if (targetDateStr === today) return 'border-l-orange-400 bg-orange-50'; // Today
-            return 'border-l-green-400'; // Future
-        },
-        // Helper to pick a random product for demo
-        pickRandomProduct(detailsFrom) {
-            const list = detailsFrom || SAMPLE_PRODUCTS;
-            const p = list[Math.floor(Math.random() * list.length)];
-            return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
-        },
-        // Address Search Proxy
-        // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
-        async searchAddress(zip) {
-            // Using zipcloud API directly
-            const url = `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`;
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-
-                if (data.status === 200 && data.results) {
-                    const r = data.results[0];
-                    return {
-                        status: 'success',
-                        found: true,
-                        address: `${r.address1}${r.address2}${r.address3}`,
-                        details: r
-                    };
-                } else if (data.status === 200 && !data.results) {
-                    return { status: 'success', found: false };
-                } else {
-                    return { status: 'error', message: `API Status: ${data.status} - ${data.message || ''}` };
-                }
-            } catch (e) {
-                console.error('Address Search Error:', e);
-                return { status: 'error', message: e.toString() };
-            }
-        }
-    };
-</script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sample Request Manager</title>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Vue.js 3 -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-    body {
-        font-family: 'Inter', sans-serif;
-    }
-
-    /* Print Styles */
-    @media print {
-        .no-print {
+        /* History Print Styles */
+        .print-hide {
             display: none !important;
         }
 
-        .print-only {
-            display: block !important;
+        header,
+        .print-hide-actions {
+            display: none !important;
         }
 
-        body {
-            background: white;
-            color: black;
+        /* Expand container */
+        main,
+        .max-w-7xl {
+            max-width: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
         }
 
-        .print-page-break {
-            page-break-before: always;
+        /* Table Optimization */
+        table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        /* Reset Kanban layout for print to list */
-        .kanban-board {
-            display: block;
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: black !important;
         }
 
-        .kanban-card {
-            border: 1px solid #ccc;
-            margin-bottom: 20px;
-            break-inside: avoid;
+        th {
+            background-color: #f0f0f0 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
     }
 
@@ -376,7 +270,7 @@
                             </div>
                             <div class="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100 truncate">
                                 <span class="font-semibold text-slate-600">{{ order.items.length }}点:</span>
-                                {{ order.items.map(i => i.name).join(', ') }}
+                                <span v-if="order.items.length > 0">{{ order.items.map(i => i.name).join(', ') }}</span>
                             </div>
                         </div>
                     </div>
@@ -396,7 +290,7 @@
                     </h2>
 
                     <!-- Filters -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-lg print-hide">
                         <div class="flex flex-col">
                             <label class="text-xs font-bold text-slate-500 mb-1">期間 (開始)</label>
                             <input type="date" v-model="filters.startDate"
@@ -421,6 +315,12 @@
                                 <option value="その他">その他 (非有機)</option>
                             </select>
                         </div>
+                        <div class="flex flex-col justify-end print-hide">
+                            <button @click="resetFilters"
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded border border-gray-300 transition text-sm">
+                                条件リセット
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -428,9 +328,19 @@
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-lg text-slate-700">日次・商品別集計リスト</h3>
-                        <span class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full">
-                            合計数量: {{ totalQuantity }}
-                        </span>
+                        <div class="flex items-center gap-4">
+                            <span class="bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full">
+                                合計数量: {{ totalQuantity }}
+                            </span>
+                            <button @click="printHistory"
+                                class="print-hide bg-slate-700 text-white text-sm px-3 py-1.5 rounded hover:bg-slate-600 transition flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                PDF出力 (印刷)
+                            </button>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto border border-slate-200 rounded-lg">
@@ -814,6 +724,17 @@
                         this.saveLocalOrders();
                         this.showMessage(`(Demo) ステータス更新: ${newStatus}`);
                     }
+                },
+
+                // --- UI Helpers ---
+                resetFilters() {
+                    this.filters.startDate = '';
+                    this.filters.endDate = '';
+                    this.filters.keyword = '';
+                    this.filters.organicType = '';
+                },
+                printHistory() {
+                    window.print();
                 },
 
                 // --- Utils ---
