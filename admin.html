@@ -517,6 +517,11 @@
 
                 <div class="space-y-3 mb-6">
                     <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">発送日</label>
+                        <input type="date" v-model="shipmentInput.date"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                    </div>
+                    <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">出荷担当者名</label>
                         <input type="text" v-model="shipmentInput.staff" placeholder="例: 佐藤"
                             class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 focus:outline-none">
@@ -564,7 +569,10 @@
                     selectedOrder: null,
                     showStatusConfirmModal: false,
                     pendingStatusUpdate: null,
-                    shipmentInput: { staff: '', trackingNumber: '' },
+                    selectedOrder: null,
+                    showStatusConfirmModal: false,
+                    pendingStatusUpdate: null,
+                    shipmentInput: { staff: '', trackingNumber: '', date: '' },
                     message: '',
                     messageType: 'success',
 
@@ -601,11 +609,12 @@
 
                     shippedOrders.forEach(order => {
                         // Date Filter
-                        const d = new Date(order.targetDate); // Use targetDate as ship date for now
+                        const shipDate = order.shipmentDate || order.targetDate; // Prefer shipmentDate
+                        const d = new Date(shipDate);
                         if (start && d < start) return;
                         if (end && d > end) return;
 
-                        const dateStr = order.targetDate.split('T')[0];
+                        const dateStr = shipDate.slice(0, 10).replace(/\//g, '-'); // Normalize YYYY-MM-DD
 
                         order.items.forEach(item => {
                             // Find Master Info
@@ -723,12 +732,14 @@
                     if (newStatus === '発送済') {
                         // Trigger Modal with Input
                         this.pendingStatusUpdate = { order, newStatus };
-                        this.shipmentInput = { staff: '', trackingNumber: '' }; // Reset inputs
+                        // Default date to today
+                        const today = new Date().toISOString().split('T')[0];
+                        this.shipmentInput = { staff: '', trackingNumber: '', date: today };
                         this.showStatusConfirmModal = true;
                     } else {
                         // Direct update for other statuses
                         // Also reset shipment inputs just in case
-                        this.shipmentInput = { staff: '', trackingNumber: '' };
+                        this.shipmentInput = { staff: '', trackingNumber: '', date: '' };
                         this.updateStatus(order, newStatus);
                     }
                 },
@@ -759,7 +770,8 @@
                                 id: order.id,
                                 status: newStatus,
                                 shipmentStaff: this.shipmentInput.staff,
-                                trackingNumber: this.shipmentInput.trackingNumber
+                                trackingNumber: this.shipmentInput.trackingNumber,
+                                shipmentDate: this.shipmentInput.date
                             };
                             await fetch(this.gasApiUrl, {
                                 method: 'POST',
