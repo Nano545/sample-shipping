@@ -217,8 +217,22 @@
             </div>
         </header>
 
-        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col">
+
+            <!-- Tabs -->
+            <div class="flex space-x-4 mb-6 border-b border-gray-200">
+                <button @click="activeTab = 'new'"
+                    :class="['px-6 py-3 font-bold text-sm outline-none transition rounded-t-lg', activeTab === 'new' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100']">
+                    新規依頼作成
+                </button>
+                <button @click="activeTab = 'history'"
+                    :class="['px-6 py-3 font-bold text-sm outline-none transition rounded-t-lg', activeTab === 'history' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100']">
+                    注文履歴 (カンバン)
+                </button>
+            </div>
+
+            <!-- TAB: New Request -->
+            <div v-show="activeTab === 'new'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Left: Product Selection -->
                 <div class="lg:col-span-2 space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-indigo-500">
@@ -308,6 +322,7 @@
                                 </select>
                             </div>
 
+                            <!-- Form continues... (Same as before) -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-1">納品指定日 <span
@@ -395,6 +410,107 @@
                     </div>
                 </div>
             </div>
+
+            <!-- TAB: History (Kanban) -->
+            <div v-show="activeTab === 'history'"
+                class="flex-grow flex flex-col h-full bg-gray-100 rounded-xl p-4 overflow-hidden">
+                <div v-if="!form.requester" class="flex flex-col items-center justify-center h-64 text-gray-500">
+                    <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <p class="text-lg font-bold">担当者を選択してください</p>
+                    <p class="text-sm">「新規依頼作成」または「送付先情報」で担当者を選択すると履歴が表示されます</p>
+                </div>
+
+                <div v-else-if="isLoadingHistory" class="flex items-center justify-center h-64">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+
+                <div v-else class="flex-grow overflow-x-auto scroller">
+                    <div class="flex gap-4 min-w-[900px] h-full pb-2">
+                        <!-- Column: 未処理 -->
+                        <div class="flex-1 flex flex-col bg-gray-200 rounded-lg p-3 min-w-[280px]">
+                            <h3
+                                class="font-bold text-gray-700 bg-gray-300 px-3 py-2 rounded mb-3 flex justify-between items-center text-sm shadow-sm">
+                                <span>未処理</span>
+                                <span class="bg-white px-2 py-0.5 rounded-full text-xs">{{ filterHistory('未処理').length
+                                    }}</span>
+                            </h3>
+                            <div class="space-y-3 overflow-y-auto scroller pr-1 flex-1">
+                                <div v-for="order in filterHistory('未処理')" :key="order.id"
+                                    class="bg-white p-3 rounded-md border-l-4 border-gray-400 shadow-sm">
+                                    <div class="font-bold text-gray-800 mb-1 text-sm truncate">{{ order.targetName }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 mb-2 font-mono">{{ formatDate(order.timestamp) }}
+                                    </div>
+                                    <div class="flex flex-wrap gap-1">
+                                        <span v-for="item in order.items" :key="item.jan"
+                                            class="text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate max-w-full">
+                                            {{ item.name }} x{{ item.qty }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column: 準備中 -->
+                        <div class="flex-1 flex flex-col bg-blue-50 rounded-lg p-3 min-w-[280px]">
+                            <h3
+                                class="font-bold text-blue-800 bg-blue-200 px-3 py-2 rounded mb-3 flex justify-between items-center text-sm shadow-sm">
+                                <span>準備中</span>
+                                <span class="bg-white px-2 py-0.5 rounded-full text-xs">{{ filterHistory('準備中').length
+                                    }}</span>
+                            </h3>
+                            <div class="space-y-3 overflow-y-auto scroller pr-1 flex-1">
+                                <div v-for="order in filterHistory('準備中')" :key="order.id"
+                                    class="bg-white p-3 rounded-md border-l-4 border-blue-400 shadow-sm">
+                                    <div class="font-bold text-gray-800 mb-1 text-sm truncate">{{ order.targetName }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 mb-2 font-mono">{{ formatDate(order.timestamp) }}
+                                    </div>
+                                    <div class="flex flex-wrap gap-1">
+                                        <span v-for="item in order.items" :key="item.jan"
+                                            class="text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate max-w-full">
+                                            {{ item.name }} x{{ item.qty }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column: 発送済 -->
+                        <div class="flex-1 flex flex-col bg-green-50 rounded-lg p-3 min-w-[280px]">
+                            <h3
+                                class="font-bold text-green-800 bg-green-200 px-3 py-2 rounded mb-3 flex justify-between items-center text-sm shadow-sm">
+                                <span>発送済</span>
+                                <span class="bg-white px-2 py-0.5 rounded-full text-xs">{{ filterHistory('発送済').length
+                                    }}</span>
+                            </h3>
+                            <div class="space-y-3 overflow-y-auto scroller pr-1 flex-1">
+                                <div v-for="order in filterHistory('発送済')" :key="order.id"
+                                    class="bg-white p-3 rounded-md border-l-4 border-green-500 shadow-sm relative overflow-hidden">
+                                    <div class="font-bold text-gray-800 mb-1 text-sm truncate">{{ order.targetName }}
+                                    </div>
+                                    <div class="text-xs text-green-700 font-bold mb-1">発送日: {{ order.shipmentDate ||
+                                        '不明' }}</div>
+                                    <div v-if="order.trackingNumber"
+                                        class="text-xs bg-gray-50 border border-gray-200 p-1.5 rounded mb-2 select-all">
+                                        追跡: {{ order.trackingNumber }}
+                                    </div>
+                                    <div class="flex flex-wrap gap-1">
+                                        <span v-for="item in order.items" :key="item.jan"
+                                            class="text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate max-w-full">
+                                            {{ item.name }} x{{ item.qty }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <!-- Confirmation Modal -->
@@ -417,6 +533,17 @@
             </div>
         </div>
 
+        <!-- Change Log -->
+        <footer
+            class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-8 mb-4 border-t border-gray-200 pt-4 text-xs text-gray-400">
+            <h4 class="font-bold mb-1">更新履歴</h4>
+            <ul class="space-y-0.5 list-disc list-inside opacity-80">
+                <li>v1.2.0: 注文履歴機能（カンバン表示）を追加</li>
+                <li>v1.1.0: 発送通知メールに追跡番号・担当者名を追加</li>
+                <li>v1.0.0: リリース</li>
+            </ul>
+        </footer>
+
     </div>
 
     <?!= include('_utils'); ?>
@@ -429,6 +556,10 @@
                     gasApiUrl: GAS_API_URL,
                     products: SAMPLE_PRODUCTS,
                     requesterList: REQUESTER_LIST,
+
+                    activeTab: 'new', // 'new' or 'history'
+                    historyOrders: [],
+                    isLoadingHistory: false,
 
                     searchQuery: '',
                     cart: [],
@@ -460,6 +591,18 @@
                     return this.cart.reduce((sum, item) => sum + item.qty, 0);
                 }
             },
+            watch: {
+                'form.requester'(newVal) {
+                    if (newVal && this.activeTab === 'history') {
+                        this.fetchHistory();
+                    }
+                },
+                activeTab(newVal) {
+                    if (newVal === 'history' && this.form.requester) {
+                        this.fetchHistory();
+                    }
+                }
+            },
             async mounted() {
                 await this.fetchProducts();
             },
@@ -479,6 +622,46 @@
                             this.showMessage('通信エラー: デモモードで動作します', 'error');
                         }
                     }
+                },
+                async fetchHistory() {
+                    if (!this.form.requester) return;
+                    this.isLoadingHistory = true;
+
+                    if (this.gasApiUrl) {
+                        try {
+                            const params = new URLSearchParams({
+                                action: 'myOrders',
+                                requester: this.form.requester
+                            });
+                            const res = await fetch(`${this.gasApiUrl}?${params.toString()}`);
+                            const data = await res.json();
+                            if (data.status === 'success') {
+                                this.historyOrders = data.items;
+                            } else {
+                                console.error(data.message);
+                                this.historyOrders = [];
+                            }
+                        } catch (e) {
+                            console.error('History fetch failed', e);
+                            this.showMessage('履歴の取得に失敗しました', 'error');
+                        }
+                    } else {
+                        // Demo data
+                        await new Promise(r => setTimeout(r, 600));
+                        this.historyOrders = [
+                            { id: '1', timestamp: new Date(), targetName: '（株）サンプル商事', items: [{ name: '商品A', qty: 2 }], status: '未処理' },
+                            { id: '2', timestamp: new Date(Date.now() - 86400000), targetName: '大阪支店', items: [{ name: '商品B', qty: 1 }], status: '発送済', shipmentDate: '2025/10/25', trackingNumber: '1234-5678' }
+                        ];
+                    }
+                    this.isLoadingHistory = false;
+                },
+                filterHistory(status) {
+                    return this.historyOrders.filter(o => o.status === status);
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
                 },
                 showMessage(text, type = 'success') {
                     this.message = text;
@@ -502,13 +685,10 @@
                 removeFromCart(index) {
                     this.cart.splice(index, 1);
                 },
-
-                // Confirm Dialog Trigger
                 confirmSubmit() {
                     if (this.cart.length === 0) return;
                     this.showConfirmModal = true;
                 },
-
                 async submitOrder() {
                     this.showConfirmModal = false; // Close modal
                     this.isSubmitting = true;
@@ -545,23 +725,34 @@
                     } else {
                         // Demo
                         await new Promise(r => setTimeout(r, 800));
-                        console.log('Demo Submit:', payload);
+                        // console.log('Demo Submit:', payload);
                         this.showMessage('デモ注文を送信しました');
                         this.resetForm();
                     }
                     this.isSubmitting = false;
                 },
                 resetForm() {
+                    // Cache requester name
+                    const cachedRequester = this.form.requester;
                     this.cart = [];
-                    this.form.requester = '';
-                    this.form.zip = '';
-                    this.form.addressAuto = '';
-                    this.form.addressDetail = '';
-                    this.form.targetName = '';
-                    this.form.phone = '';
-                    this.form.remarks = '';
-                    this.form.targetDate = new Date().toISOString().split('T')[0];
-                    this.form.timeSlot = '';
+                    // We might typically clear requester too, but user might want to submit multiple.
+                    // However, original logic cleared everything. Let's keep it that way for now, 
+                    // though for history viewing it might be annoying if it clears.
+                    // Actually, let's KEEP requester name for convenience?
+                    // "resetForm" usually means "Next Order". 
+                    // I will keep requester name because the user probably shouldn't have to select it again every time.
+
+                    this.form = {
+                        requester: cachedRequester,
+                        zip: '',
+                        addressAuto: '',
+                        addressDetail: '',
+                        targetName: '',
+                        phone: '',
+                        targetDate: new Date().toISOString().split('T')[0],
+                        timeSlot: '',
+                        remarks: ''
+                    }
                 },
                 async handleAddressSearch() {
                     if (!this.form.zip || this.form.zip.length < 3) {
