@@ -53,6 +53,9 @@
         }
 
         /* Expand container */
+        html,
+        body,
+        #admin-app,
         main,
         .max-w-7xl {
             max-width: none !important;
@@ -61,6 +64,9 @@
             padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
         }
 
         /* Table Optimization */
@@ -241,7 +247,8 @@
         <main class="flex-grow w-full px-2 sm:px-4 lg:px-6 py-6 overflow-x-auto print-no-margin">
 
             <!-- VIEW: KANBAN -->
-            <div v-show="currentView === 'kanban'" class="flex gap-4 min-w-[1000px] h-[calc(100vh-140px)]">
+            <div v-show="currentView === 'kanban'"
+                class="flex gap-4 min-w-[1000px] h-[calc(100vh-140px)] print:h-auto print:block">
                 <!-- Columns -->
                 <div v-for="status in ['未処理', '準備中', '発送済']" :key="status"
                     class="flex-1 bg-slate-200 rounded-xl flex flex-col shadow-inner border border-slate-300"
@@ -274,7 +281,8 @@
                                 </svg>
                                 {{ order.requester }}
                             </div>
-                            <div class="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100 truncate">
+                            <div
+                                class="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100 whitespace-normal break-words">
                                 <span class="font-semibold text-slate-600">{{ order.items.length }}点:</span>
                                 <span v-if="order.items.length > 0">{{ order.items.map(i => i.name).join(', ') }}</span>
                             </div>
