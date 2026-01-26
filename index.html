@@ -115,14 +115,7 @@
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysGWGp3gKKdiT46ONGkhPzJ595ZqSg2sUVmpNbD-76alLhbikUHGZ0ttEaKKTmOJBC/exec';
 
     // --- CONSTANTS ---
-    const SAMPLE_PRODUCTS = [
-        { jan: '4901234567890', name: 'プレミアム緑茶 500ml', tempQty: 1 },
-        { jan: '4901234567891', name: '香ばし玄米茶 500ml', tempQty: 1 },
-        { jan: '4901234567892', name: '特選ジャスミン茶 500ml', tempQty: 1 },
-        { jan: '4901234567893', name: '濃厚ブラックコーヒー 280ml', tempQty: 1 },
-        { jan: '4901234567894', name: '微糖カフェオレ 280ml', tempQty: 1 },
-        { jan: '4501234567800', name: 'リフレッシュ・レモン 500ml', tempQty: 1 },
-    ];
+
 
     const REQUESTER_LIST = ['東方', '山本', '竹田', '小川', '岡本'];
 
@@ -157,12 +150,7 @@
             if (targetDateStr === today) return 'border-l-orange-400 bg-orange-50'; // Today
             return 'border-l-green-400'; // Future
         },
-        // Helper to pick a random product for demo
-        pickRandomProduct(detailsFrom) {
-            const list = detailsFrom || SAMPLE_PRODUCTS;
-            const p = list[Math.floor(Math.random() * list.length)];
-            return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
-        },
+
         // Address Search Proxy
         // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
         async searchAddress(zip) {

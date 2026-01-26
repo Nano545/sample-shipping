@@ -115,14 +115,7 @@
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysGWGp3gKKdiT46ONGkhPzJ595ZqSg2sUVmpNbD-76alLhbikUHGZ0ttEaKKTmOJBC/exec';
 
     // --- CONSTANTS ---
-    const SAMPLE_PRODUCTS = [
-        { jan: '4901234567890', name: 'プレミアム緑茶 500ml', tempQty: 1 },
-        { jan: '4901234567891', name: '香ばし玄米茶 500ml', tempQty: 1 },
-        { jan: '4901234567892', name: '特選ジャスミン茶 500ml', tempQty: 1 },
-        { jan: '4901234567893', name: '濃厚ブラックコーヒー 280ml', tempQty: 1 },
-        { jan: '4901234567894', name: '微糖カフェオレ 280ml', tempQty: 1 },
-        { jan: '4501234567800', name: 'リフレッシュ・レモン 500ml', tempQty: 1 },
-    ];
+
 
     const REQUESTER_LIST = ['東方', '山本', '竹田', '小川', '岡本'];
 
@@ -157,12 +150,7 @@
             if (targetDateStr === today) return 'border-l-orange-400 bg-orange-50'; // Today
             return 'border-l-green-400'; // Future
         },
-        // Helper to pick a random product for demo
-        pickRandomProduct(detailsFrom) {
-            const list = detailsFrom || SAMPLE_PRODUCTS;
-            const p = list[Math.floor(Math.random() * list.length)];
-            return { jan: p.jan, name: p.name, qty: Math.floor(Math.random() * 5) + 1 };
-        },
+
         // Address Search Proxy
         // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
         async searchAddress(zip) {
@@ -230,11 +218,7 @@
                         class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded transition">
                         更新
                     </button>
-                    <!-- Debug Button -->
-                    <button @click="generateDemoData"
-                        class="text-xs text-slate-400 hover:text-white border border-slate-600 px-2 py-1 rounded hover:bg-slate-700 transition">
-                        デモデータ(Debug)
-                    </button>
+
                 </div>
             </div>
             <!-- Status Msg -->
@@ -608,7 +592,21 @@
             computed: {
                 ordersByStatus() {
                     const groups = { '未処理': [], '準備中': [], '発送済': [] };
+
+                    // Archival Threshold: 7 days ago
+                    const now = new Date();
+                    const thresholdDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+
                     this.orders.forEach(o => {
+                        // Filter '発送済' orders
+                        if (o.status === '発送済') {
+                            const dateStr = o.shipmentDate || o.targetDate;
+                            if (dateStr) {
+                                const checkDate = new Date(dateStr);
+                                if (checkDate < thresholdDate) return; // Hide if older than 7 days
+                            }
+                        }
+
                         if (groups[o.status]) groups[o.status].push(o);
                     });
                     return groups;
@@ -690,7 +688,8 @@
 
                 async fetchProducts() {
                     if (!this.gasApiUrl) {
-                        this.products = SAMPLE_PRODUCTS; // Fallback
+                        console.warn('API URL not set');
+                        this.products = [];
                         return;
                     }
                     try {
@@ -707,10 +706,9 @@
                         }
                     } catch (e) {
                         console.error('Products Fetch Error', e);
-                        // fallback to sample if needed
-                        const hash = {};
-                        SAMPLE_PRODUCTS.forEach(p => hash[p.jan] = p);
-                        this.masterHash = hash;
+
+                        this.products = [];
+                        this.masterHash = {};
                     }
                 },
 
@@ -723,11 +721,9 @@
                                 this.orders = data.items;
                             }
                         } catch (e) {
-                            console.warn('API Error, using localStorage demo data', e);
-                            this.loadLocalOrders();
+                            console.warn('API Error', e);
+                            this.showMessage('注文データの取得に失敗しました', 'error');
                         }
-                    } else {
-                        this.loadLocalOrders();
                     }
                 },
 
@@ -804,66 +800,40 @@
                             order.status = originalStatus; // Revert
                             this.showMessage('更新エラー', 'error');
                         }
-                    } else {
-                        this.saveLocalOrders();
-                        this.showMessage(`(Demo) ステータス更新: ${newStatus}`);
                     }
-                },
-
-                // --- UI Helpers ---
-                resetFilters() {
-                    this.filters.startDate = '';
-                    this.filters.endDate = '';
-                    this.filters.keyword = '';
-                    this.filters.organicType = '';
-                },
-                printHistory() {
-                    window.print();
-                },
-
-                // --- Utils ---
-                openOrderModal(order) {
-                    this.selectedOrder = order;
-                },
-                closeModal() {
-                    this.selectedOrder = null;
-                },
-                printOrder() {
-                    window.print();
-                },
-                showMessage(text, type = 'success') {
-                    this.message = text;
-                    this.messageType = type;
-                    setTimeout(() => this.message = '', 3000);
-                },
-
-                // --- Demo Data Support for Admin ---
-                loadLocalOrders() {
-                    const saved = localStorage.getItem('demo_orders');
-                    if (saved) {
-                        this.orders = JSON.parse(saved);
-                    }
-                },
-                saveLocalOrders() {
-                    localStorage.setItem('demo_orders', JSON.stringify(this.orders));
-                },
-                generateDemoData() {
-                    // simplified demo gen for admin if list is empty
-                    const today = new Date().toISOString().split('T')[0];
-                    const pick = () => AppUtils.pickRandomProduct(this.products.length ? this.products : SAMPLE_PRODUCTS);
-                    const newOrder = {
-                        id: crypto.randomUUID(),
-                        requester: 'DemoShipper',
-                        zip: '100-0001', address: '東京都千代田区...', targetName: '東京本社', phone: '03-0000-0000',
-                        targetDate: today, timeSlot: 'PM', status: '未処理', remarks: 'テスト注文',
-                        items: [pick()]
-                    };
-                    this.orders.push(newOrder);
-                    this.saveLocalOrders();
-                    this.showMessage('デモデータを追加しました');
                 }
-            }
-        }).mount('#admin-app');
+            },
+
+            // --- UI Helpers ---
+            resetFilters() {
+                this.filters.startDate = '';
+                this.filters.endDate = '';
+                this.filters.keyword = '';
+                this.filters.organicType = '';
+            },
+            printHistory() {
+                window.print();
+            },
+
+            // --- Utils ---
+            openOrderModal(order) {
+                this.selectedOrder = order;
+            },
+            closeModal() {
+                this.selectedOrder = null;
+            },
+            printOrder() {
+                window.print();
+            },
+            showMessage(text, type = 'success') {
+                this.message = text;
+                this.messageType = type;
+                setTimeout(() => this.message = '', 3000);
+            },
+
+
+        }
+        ).mount('#admin-app');
     </script>
 </body>
 
