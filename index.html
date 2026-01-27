@@ -625,7 +625,7 @@
             data() {
                 return {
                     gasApiUrl: GAS_API_URL,
-                    products: SAMPLE_PRODUCTS,
+                    products: [],
                     requesterList: REQUESTER_LIST,
 
                     activeTab: 'new', // 'new' or 'history'
@@ -724,12 +724,11 @@
                             const data = await res.json();
                             if (data.status !== 'error' && data.products) {
                                 this.products = data.products.map(p => ({ ...p, tempQty: 1 }));
-                            } else {
-                                this.showMessage('デモデータを使用中 (API接続なし/エラー)', 'warning');
+
                             }
                         } catch (e) {
-                            console.warn('API Error, using demo data', e);
-                            this.showMessage('通信エラー: デモモードで動作します', 'error');
+                            console.error('API Error', e);
+                            this.showMessage('商品データの取得に失敗しました', 'error');
                         }
                     }
                 },
@@ -755,13 +754,7 @@
                             console.error('History fetch failed', e);
                             this.showMessage('履歴の取得に失敗しました', 'error');
                         }
-                    } else {
-                        // Demo data
-                        await new Promise(r => setTimeout(r, 600));
-                        this.historyOrders = [
-                            { id: '1', timestamp: new Date(), targetName: '（株）サンプル商事', items: [{ name: '商品A', qty: 2 }], status: '未処理', zip: '1000001', address: '東京都千代田区千代田1-1', phone: '03-1234-5678' },
-                            { id: '2', timestamp: new Date(Date.now() - 86400000), targetName: '大阪支店', items: [{ name: '商品B', qty: 1 }], status: '発送済', shipmentDate: '2025/10/25', trackingNumber: '1234-5678', zip: '5300001', address: '大阪府大阪市北区梅田1-1-1', phone: '06-9876-5432' }
-                        ];
+
                     }
                     this.isLoadingHistory = false;
                 },
