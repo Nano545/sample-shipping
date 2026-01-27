@@ -1,0 +1,70 @@
+<script>
+    // --- CONFIGURATION ---
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysGWGp3gKKdiT46ONGkhPzJ595ZqSg2sUVmpNbD-76alLhbikUHGZ0ttEaKKTmOJBC/exec';
+
+    // --- CONSTANTS ---
+
+
+    const REQUESTER_LIST = ['東方', '山本', '竹田', '小川', '岡本'];
+
+    // --- GLOBAL ERROR HANDLER ---
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+        console.error('Global Error:', msg, url, lineNo, error);
+        const errorDiv = document.getElementById('error-display') || document.createElement('div');
+        errorDiv.id = 'error-display';
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.bottom = '0';
+        errorDiv.style.left = '0';
+        errorDiv.style.right = '0';
+        errorDiv.style.backgroundColor = 'red';
+        errorDiv.style.color = 'white';
+        errorDiv.style.padding = '10px';
+        errorDiv.style.zIndex = '9999';
+        errorDiv.innerHTML = `<strong>Error:</strong> ${msg} (Line: ${lineNo})`;
+        document.body.appendChild(errorDiv);
+        return false;
+    };
+
+    // --- UTILS OBJECT ---
+    const AppUtils = {
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleDateString('ja-JP');
+        },
+        getUrgencyClass(targetDateStr) {
+            const today = new Date().toISOString().split('T')[0];
+            if (!targetDateStr) return '';
+            if (targetDateStr < today) return 'border-l-red-500 bg-red-50'; // Overdue
+            if (targetDateStr === today) return 'border-l-orange-400 bg-orange-50'; // Today
+            return 'border-l-green-400'; // Future
+        },
+
+        // Address Search Proxy
+        // Address Search (Direct Browser Fetch to avoid GAS IP blocking)
+        async searchAddress(zip) {
+            // Using zipcloud API directly
+            const url = `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.status === 200 && data.results) {
+                    const r = data.results[0];
+                    return {
+                        status: 'success',
+                        found: true,
+                        address: `${r.address1}${r.address2}${r.address3}`,
+                        details: r
+                    };
+                } else if (data.status === 200 && !data.results) {
+                    return { status: 'success', found: false };
+                } else {
+                    return { status: 'error', message: `API Status: ${data.status} - ${data.message || ''}` };
+                }
+            } catch (e) {
+                console.error('Address Search Error:', e);
+                return { status: 'error', message: e.toString() };
+            }
+        }
+    };
+</script>
