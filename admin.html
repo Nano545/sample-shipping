@@ -214,6 +214,15 @@
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <!-- Nav to Requester -->
+                    <a href="?page=requester"
+                        class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition flex items-center gap-1 no-underline">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        依頼フォームへ
+                    </a>
                     <button @click="fetchOrders"
                         class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded transition">
                         更新
@@ -230,8 +239,33 @@
 
         <main class="flex-grow w-full px-2 sm:px-4 lg:px-6 py-6 overflow-x-auto print-no-margin">
 
+            <!-- Auth Modal (Overlay) -->
+            <div v-if="!isAuthenticated"
+                class="fixed inset-0 bg-slate-900 z-[10000] flex flex-col items-center justify-center p-4">
+                <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md text-center">
+                    <div class="mb-4 text-slate-700">
+                        <svg class="w-16 h-16 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <h2 class="text-xl font-bold">Admin Login</h2>
+                        <p class="text-sm text-slate-500">管理者用パスワードを入力してください</p>
+                    </div>
+                    <form @submit.prevent="checkPassword" class="space-y-4">
+                        <input type="password" v-model="passwordInput" placeholder="PIN" autofocus
+                            class="w-full text-center text-2xl tracking-widest border border-slate-300 rounded px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="submit"
+                            class="w-full bg-slate-800 text-white font-bold py-2 rounded hover:bg-slate-700 transition">
+                            認証
+                        </button>
+                    </form>
+                    <p v-if="authError" class="mt-4 text-red-500 font-bold text-sm">{{ authError }}</p>
+                </div>
+            </div>
+
             <!-- VIEW: KANBAN -->
-            <div v-show="currentView === 'kanban'"
+            <div v-if="isAuthenticated" v-show="currentView === 'kanban'"
                 class="flex gap-4 min-w-[1000px] h-[calc(100vh-140px)] print:h-auto print:block">
                 <!-- Columns -->
                 <div v-for="status in ['未処理', '準備中', '発送済']" :key="status"
@@ -276,7 +310,7 @@
             </div>
 
             <!-- VIEW: HISTORY ANALYSIS -->
-            <div v-show="currentView === 'history'"
+            <div v-if="isAuthenticated" v-show="currentView === 'history'"
                 class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <div class="mb-6 border-b border-slate-100 pb-4">
                     <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -567,6 +601,11 @@
                     orders: [],
                     requesterList: REQUESTER_LIST,
 
+                    // Auth
+                    isAuthenticated: false,
+                    passwordInput: '',
+                    authError: '',
+
                     // UI State
                     currentView: 'kanban', // 'kanban' | 'history'
                     selectedOrder: null,
@@ -680,6 +719,53 @@
                 getUrgencyClass: AppUtils.getUrgencyClass,
 
                 async init() {
+                    // Check Session
+                    if (sessionStorage.getItem('admin_auth') === 'true') {
+                        this.isAuthenticated = true;
+                        await Promise.all([
+                            this.fetchProducts(),
+                            this.fetchOrders()
+                        ]);
+                    }
+                    // Else wait for user input
+                },
+
+                async checkPassword() {
+                    this.authError = '';
+                    if (!this.passwordInput) return;
+
+                    if (this.gasApiUrl) {
+                        try {
+                            const res = await fetch(this.gasApiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({ action: 'auth', pin: this.passwordInput })
+                            });
+                            const data = await res.json();
+                            if (data.status === 'success') {
+                                this.onAuthSuccess();
+                            } else {
+                                this.authError = 'パスワードが違います';
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            this.authError = '認証エラーが発生しました';
+                        }
+                    } else {
+                        // Local Dev / Demo Fallback
+                        // Accept '1234' or '3245' for local dev
+                        if (this.passwordInput === '3245' || this.passwordInput === '1234') {
+                            this.onAuthSuccess();
+                        } else {
+                            this.authError = 'パスワードが違います (Demo)';
+                        }
+                    }
+                },
+
+                async onAuthSuccess() {
+                    this.isAuthenticated = true;
+                    sessionStorage.setItem('admin_auth', 'true');
+                    this.passwordInput = '';
                     await Promise.all([
                         this.fetchProducts(),
                         this.fetchOrders()
