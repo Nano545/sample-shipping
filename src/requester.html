@@ -3,10 +3,15 @@
 
 <head>
     <?!= include('_styles'); ?>
+    <style>
+        [v-cloak] {
+            display: none !important;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-50 text-gray-800">
-    <div id="requester-app" class="min-h-screen flex flex-col">
+    <div id="requester-app" class="min-h-screen flex flex-col" v-cloak>
 
         <!-- Header (Blue Theme for Requester) -->
         <header class="bg-indigo-600 shadow-lg sticky top-0 z-50">
